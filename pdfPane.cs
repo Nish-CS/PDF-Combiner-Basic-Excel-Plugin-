@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using iText;
+using iTextSharp;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -11,8 +11,8 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using iText.Kernel.Pdf;
-using iText.Kernel.Utils;
+using iTextSharp.text.pdf;
+using iTextSharp.text;
 
 namespace PDF_Combiner
 {
@@ -131,20 +131,47 @@ namespace PDF_Combiner
 
             string fullpath = txtSaveLocation.Text.Trim() + "\\" + filename;
 
-            PdfDocument pdf = new PdfDocument(new PdfWriter(fullpath));
-            PdfMerger merger = new PdfMerger(pdf);
+            
 
-            foreach (ListViewItem item in listView1.Items)
+            using(FileStream stream = new FileStream(fullpath,FileMode.Create))
             {
-                string t = item.SubItems[0].Text;
+                Document pdf = new Document();
+                PdfSmartCopy copy = new PdfSmartCopy(pdf, stream);
+                PdfReader reader = null;
 
-                PdfDocument p = new PdfDocument(new PdfReader(t));
-                merger.Merge(p, 1, p.GetNumberOfPages());
-                p.Close();
-
+                try
+                {
+                    pdf.Open();
+                    foreach(ListViewItem item in listView1.Items)
+                    {
+                        string t = item.SubItems[0].Text;
+                        reader = new PdfReader(t);
+                        copy.AddDocument(reader);
+                        reader.Close();
+                    }
+                }
+                catch(Exception ex)
+                {
+                    if(reader != null)
+                    {
+                        reader.Close();
+                    }
+                    MessageBox.Show(this, ex.Message, "Merge Error");
+                    return;
+                }
+                finally
+                {
+                    if(pdf != null && pdf.IsOpen() == true)
+                    {
+                        pdf.Close();
+                    }
+                }
+                MessageBox.Show(this, "PDFs Successfully Merged", "Merge Success");
             }
-            pdf.Close();
         }
+            
+
+           
 
         private bool HasWritePermissions(string path)
         {
